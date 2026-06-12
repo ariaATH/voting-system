@@ -1,104 +1,44 @@
 # Voting System
 
-یک قرارداد هوشمند (Smart Contract) ساده برای سیستم رأی‌گیری، نوشته‌شده با Solidity و قابل توسعه/تست با Foundry.
+A Solidity smart contract for creating and managing proposals with on-chain voting, built and tested with Foundry.
 
-## معرفی
+## What it does
 
-این پروژه امکان ایجاد پیشنهاد (Proposal)، رأی‌گیری روی آن و ثبت رأی‌دهندگان مجاز برای پیشنهادهای خصوصی را فراهم می‌کند. هر پیشنهاد می‌تواند یکی از دو نوع زیر باشد:
+The contract lets anyone create a proposal with a name, description, and a start/end time window. Each proposal is either public or private:
 
-- **Public_proposal**: پیشنهاد عمومی — هر کسی می‌تواند رأی دهد.
-- **Private_proposal**: پیشنهاد خصوصی — فقط رأی‌دهندگانی که توسط مالک پیشنهاد ثبت‌نام شده‌اند می‌توانند رأی دهند.
+- **Public proposals** — any address can vote during the active time window.
+- **Private proposals** — only addresses registered by the proposal owner can vote.
 
-## ساختار پروژه
+Votes are tracked per address per proposal, so the same wallet can't vote twice on the same proposal.
 
-```
-voting/
-├── src/
-│   └── voting.sol        # قرارداد اصلی
-├── test/                  # تست‌های Foundry
-├── script/                # اسکریپت‌های دیپلوی
-├── lib/                   # کتابخانه‌های خارجی
-└── foundry.toml           # تنظیمات پروژه
-```
+## Contract overview (`src/voting.sol`)
 
-## امکانات قرارداد
+- `createProposal(...)` — creates a new proposal, validates that the start time is before the end time, and emits `ProposalCreated`.
+- `registerVoters(...)` — owner-only, used to whitelist voters for a private proposal. Emits `VoterRegistered`.
+- `vote(proposalId)` — casts a vote if the proposal is active, the caller hasn't voted yet, and (for private proposals) the caller is registered. Emits `Voted`.
+- A set of view functions (`getProposal`, `getVoteCount`, `isVoterRegistered`, `hasVoterVoted`, `getProposalStatus`, `getProposalOwner`, `getProposalTime`, `getProposalName`, `getProposalDescription`) for reading proposal and voter data.
 
-### ایجاد پیشنهاد
-```solidity
-createProposal(string _name, string _description, uint256 _starttime, uint256 _endtime, ProposalStatus _status)
-```
-یک پیشنهاد جدید با بازه زمانی شروع و پایان مشخص ایجاد می‌کند. زمان شروع باید قبل از زمان پایان باشد.
+## Tech stack
 
-### ثبت رأی‌دهنده (برای پیشنهادهای خصوصی)
-```solidity
-registerVoters(address _voter, uint256 _proposalId)
-```
-فقط مالک پیشنهاد می‌تواند رأی‌دهندگان را برای یک پیشنهاد خصوصی ثبت‌نام کند.
+- Solidity ^0.8.0
+- [Foundry](https://book.getfoundry.sh/) for building, testing, and formatting
+- GitHub Actions for CI (build, format check, and tests on every push/PR)
 
-### رأی دادن
-```solidity
-vote(uint256 _proposalId)
-```
-هر آدرس می‌تواند فقط یک‌بار به هر پیشنهاد رأی دهد و رأی فقط در بازه زمانی فعال پیشنهاد پذیرفته می‌شود. برای پیشنهادهای خصوصی، رأی‌دهنده باید قبلاً ثبت‌نام شده باشد.
-
-### توابع View
-- `getProposal(uint256 _proposalId)` — اطلاعات کامل یک پیشنهاد
-- `getVoteCount(uint256 _proposalId)` — تعداد آرا
-- `isVoterRegistered(address _voter, uint256 _proposalId)` — وضعیت ثبت‌نام رأی‌دهنده
-- `hasVoterVoted(address _voter, uint256 _proposalId)` — بررسی رأی‌دادن یک آدرس
-- `getProposalStatus(uint256 _proposalId)` — نوع پیشنهاد (عمومی/خصوصی)
-- `getProposalOwner(uint256 _proposalId)` — مالک پیشنهاد
-- `getProposalTime(uint256 _proposalId)` — زمان شروع و پایان
-- `getProposalDescription(uint256 _proposalId)` — توضیحات پیشنهاد
-- `getProposalName(uint256 _proposalId)` — نام پیشنهاد
-
-### رویدادها (Events)
-- `ProposalCreated(uint256 proposalId, string name, string description, uint256 starttime, uint256 endtime)`
-- `Voted(address voter, uint256 proposalId)`
-- `VoterRegistered(address voter, uint256 proposalId)`
-
-### خطاهای سفارشی (Custom Errors)
-- `ProposalNotActive()`
-- `VoterNotRegistered()`
-- `VoterAlreadyVoted()`
-
-## پیش‌نیازها
-
-- [Foundry](https://book.getfoundry.sh/getting-started/installation) (forge, cast, anvil)
-- Git
-
-## نصب و راه‌اندازی
+## Getting started
 
 ```bash
-git clone https://github.com/<username>/voting-system.git
+git clone https://github.com/<your-username>/voting-system.git
 cd voting-system/voting
-forge install
-```
-
-## کامپایل پروژه
-
-```bash
 forge build
-```
-
-## اجرای تست‌ها
-
-```bash
 forge test
 ```
 
-## دیپلوی قرارداد
+## Possible next steps
 
-```bash
-forge script script/Deploy.s.sol --rpc-url <RPC_URL> --private-key <PRIVATE_KEY> --broadcast
-```
+- Add the ability for an owner to close or edit a proposal before it starts
+- Switch some `require` statements over to the custom errors already defined in the contract
+- Add more tests around edge cases (voting right at `starttime`/`endtime`, double registration, etc.)
 
-## نکات توسعه آینده
+## License
 
-- افزودن قابلیت لغو یا ویرایش پیشنهاد توسط مالک
-- اضافه کردن سقف زمانی برای ثبت‌نام رأی‌دهندگان
-- استفاده از خطاهای سفارشی (`revert`) به‌جای `require` با رشته متنی برای کاهش مصرف گس
-
-## لایسنس
-
-این پروژه تحت لایسنس [MIT](https://opensource.org/licenses/MIT) منتشر شده است.
+MIT
